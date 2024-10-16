@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML Ice Time Parser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Upload XML File to Calculate Ice Time</h1>
+<input type="file" id="fileInput" accept=".xml" />
+<button id="parseButton" class="hidden">Parse XML</button>
+<button id="copyButton" class="hidden">Copy to Clipboard</button>
+
+<h2>Results:</h2>
+<table id="resultsTable" class="hidden">
+    <thead>
+        <tr>
+            <th>Player Number (Code)</th>
+            <th>Total Time On Ice (hh:mm:ss)</th>
+        </tr>
+    </thead>
+    <tbody id="resultsBody"></tbody>
+</table>
+
+<script>
+    document.getElementById('fileInput').addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+            document.getElementById('parseButton').classList.remove('hidden');
+        }
+    });
+
+    document.getElementById('parseButton').addEventListener('click', function () {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const xmlData = e.target.result;
+            parseXML(xmlData);
+        };
+        
+        reader.readAsText(file);
+    });
+
+    function parseXML(xmlData) {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlData, "application/xml");
+
+        const instances = xmlDoc.getElementsByTagName('instance');
+        const timeOnIceMap = {}; // Object to accumulate time on ice by code
+
+        Array.from(instances).forEach(instance => {
+            const code = instance.getElementsByTagName('code')[0].textContent; // Get the player number (code)
+            const start = parseFloat(instance.getElementsByTagName('start')[0].textContent);
+            const end = parseFloat(instance.getElementsByTagName('end')[0].textContent);
+            const durationSeconds = end - start;
+
+            // Check if the code is a valid number
+            if (!isNaN(code) && code.trim() !== '') {
+                if (!timeOnIceMap[code]) {
+                    timeOnIceMap[code] = 0; // Initialize if it doesn't exist
+                }
+                timeOnIceMap[code] += durationSeconds; // Accumulate the duration
+            }
+        });
+
+        // Convert the accumulated times into a format suitable for display
+        const timeOnIce = Object.keys(timeOnIceMap).map(code => ({
+            code,
+            timeOnIce: secondsToTime(timeOnIceMap[code])
+        }));
+
+        displayResults(timeOnIce);
+    }
+
+    function secondsToTime(seconds) {
+        const hours = String(Math.floor(seconds / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+        const remainingSeconds = String(Math.floor(seconds % 60)).padStart(2, '0');
+        return `${hours}:${minutes}:${remainingSeconds}`;
+    }
+
+    function displayResults(results) {
+        const resultsBody = document.getElementById('resultsBody');
+        resultsBody.innerHTML = ''; // Clear previous results
+        results.forEach(result => {
+            const row = document.createElement('tr');
+            const codeCell = document.createElement('td');
+            const timeCell = document.createElement('td');
+
+            codeCell.textContent = result.code; // Display player number (code)
+            timeCell.textContent = result.timeOnIce;
+
+            row.appendChild(codeCell);
+            row.appendChild(timeCell);
+            resultsBody.appendChild(row);
+        });
+
+        document.getElementById('resultsTable').classList.remove('hidden');
+        document.getElementById('copyButton').classList.remove('hidden'); // Show the copy button
+    }
+
+    document.getElementById('copyButton').addEventListener('click', function () {
+        const resultsBody = document.getElementById('resultsBody');
+        const rows = resultsBody.querySelectorAll('tr');
+        let csvContent = "Player Number, Time On Ice\n";
+
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            const code = cells[0].textContent;
+            const timeOnIce = cells[1].textContent;
+            csvContent += `${code}, ${timeOnIce}\n`; // Create CSV line
+        });
+
+        // Copy to clipboard
+        navigator.clipboard.writeText(csvContent).then(() => {
+            alert('CSV copied to clipboard!');
+        }).catch(err => {
+            console.error('Could not copy text: ', err);
+        });
+    });
+</script>
+
+</body>
+</html>
