@@ -80,7 +80,7 @@
             const durationSeconds = end - start;
 
             // Check if the code is a valid number
-            if (!isNaN(code) && code.trim() !== '') {
+            if ((code.startsWith('O') || !isNaN(code)) && code.trim() !== '') {
                 if (!timeOnIceMap[code]) {
                     timeOnIceMap[code] = 0; // Initialize if it doesn't exist
                 }
