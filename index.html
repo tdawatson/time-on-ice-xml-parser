@@ -79,12 +79,15 @@
             const end = parseFloat(instance.getElementsByTagName('end')[0].textContent);
             const durationSeconds = end - start;
 
-            // Check if the code is a valid number
-            if ((code.startsWith('O') || !isNaN(code)) && code.trim() !== '') {
-                if (!timeOnIceMap[code]) {
-                    timeOnIceMap[code] = 0; // Initialize if it doesn't exist
+            // Trim "O-" from the code before checking if it's a number
+            let trimmedCode = code.trim().replace(/^O-/, ''); 
+
+            // Check if the trimmed code is a valid number and not empty
+            if (!isNaN(trimmedCode) && trimmedCode !== '') {
+                if (!timeOnIceMap[trimmedCode]) {
+                    timeOnIceMap[trimmedCode] = 0; // Initialize if it doesn't exist
                 }
-                timeOnIceMap[code] += durationSeconds; // Accumulate the duration
+                timeOnIceMap[trimmedCode] += durationSeconds; // Accumulate the duration
             }
         });
 
